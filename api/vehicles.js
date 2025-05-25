@@ -1,8 +1,9 @@
-Import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   'https://rjkbodfqsvckvnhjwmhg.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+  ''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2JvZGZxc3Zja3ZuaGp3bWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxNjM3NjQsImV4cCI6MjA2MzczOTc2NH0.jX5OPZkz1JSSwrahCoFzqGYw8tYkgE8isbn12uP43-0'
+'
 )
 
 export default async function handler(req, res) {
