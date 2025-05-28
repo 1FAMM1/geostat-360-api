@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     // Validar formato do veículo (opcional)
     const vehiclePattern = /^[A-Z]{4}-\d{2}$/;
     if (!vehiclePattern.test(vehicle)) {
-      return res.status(400).json({ 
+      return res.(400).json({ 
         error: 'Formato inválido. Use: XXXX-XX (ex: VFCI-01)' 
       });
     }
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
       .from('vehicle_status')
       .insert({ 
         vehicle: vehicle.toUpperCase(),
-        status: status || 'Disponível no Quartel',
+        current_status: status || 'Disponível no Quartel',
         is_inop: inop || false
       })
       .select();
