@@ -54,7 +54,7 @@ export default async function handler(req, res) {
       .insert({ 
         vehicle: vehicle.toUpperCase(),
         status: status || 'Disponível no Quartel',
-        inop: inop || false
+        is_inop: inop || false
       })
       .select();
 
