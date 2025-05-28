@@ -18,53 +18,60 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log('Limpando tabela e resetando sequence...');
+    console.log('Iniciando limpeza da tabela...');
     
-    // 1. Apagar todos os registos
+    // Método 1: TRUNCATE direto via SQL
+    const { data: truncateData, error: truncateError } = await supabase
+      .rpc('sql', { 
+        query: 'TRUNCATE TABLE fomio_teams RESTART IDENTITY CASCADE;' 
+      });
+
+    if (!truncateError) {
+      console.log('TRUNCATE executado com sucesso');
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Data cleared with TRUNCATE',
+        method: 'truncate_sql'
+      });
+    }
+
+    console.log('TRUNCATE falhou, tentando função personalizada...');
+    
+    // Método 2: Função personalizada
+    const { data: funcData, error: funcError } = await supabase
+      .rpc('truncate_fomio_teams');
+
+    if (!funcError) {
+      console.log('Função personalizada executada');
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Data cleared with custom function',
+        method: 'custom_function'
+      });
+    }
+
+    console.log('Função falhou, usando DELETE + reset manual...');
+    
+    // Método 3: DELETE + reset manual
     const { data: deleteData, error: deleteError } = await supabase
       .from('fomio_teams')
       .delete()
       .neq('id', 0);
     
-    if (deleteError) {
-      console.error('Erro no DELETE:', deleteError);
-      throw deleteError;
-    }
+    if (deleteError) throw deleteError;
     
-    // 2. ✅ RESET FORÇADO DA SEQUENCE
+    // Reset manual da sequence
     const { data: resetData, error: resetError } = await supabase
-      .from('fomio_teams')
-      .select('id')
-      .limit(1);
-    
-    // Usar query SQL direta para reset
-    const resetQuery = `SELECT setval('fomio_teams_id_seq', 1, false);`;
-    
-    // Como não temos acesso direto ao SQL, vamos usar um workaround
-    // Inserir e apagar um registo para forçar reset
-    const { data: tempData, error: tempError } = await supabase
-      .from('fomio_teams')
-      .insert({ team_name: 'temp', patente: 'temp', nome: 'temp' })
-      .select();
-    
-    if (!tempError && tempData && tempData.length > 0) {
-      // Se o ID não for 1, há problema na sequence
-      const tempId = tempData[0].id;
-      
-      // Apagar o registo temporário
-      await supabase
-        .from('fomio_teams')
-        .delete()
-        .eq('id', tempId);
-      
-      console.log(`Sequence testada - próximo ID seria: ${tempId + 1}`);
-    }
+      .rpc('sql', { 
+        query: "SELECT setval('fomio_teams_id_seq', 1, false);" 
+      });
 
-    console.log('Limpeza e reset concluídos');
+    console.log('DELETE + reset manual executado');
     
-    res.status(200).json({ 
+    return res.status(200).json({ 
       success: true, 
-      message: 'Limpeza e reset de sequência com sucesso'
+      message: 'Data cleared with DELETE + manual reset',
+      method: 'delete_reset'
     });
 
   } catch (error) {
