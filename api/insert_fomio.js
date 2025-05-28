@@ -1,12 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// ✅ Credenciais corretas do fomio.js
+const supabaseUrl = 'https://rjkbodfqsvckvnhjwmhg.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2JvZGZxc3Zja3ZuaGp3bWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxNjM3NjQsImV4cCI6MjA2MzczOTc2NH0.jX5OPZkz1JSSwrahCoFzqGYw8tYkgE8isbn12uP43-0'
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 export default async function handler(req, res) {
-  // Permitir CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -22,28 +21,24 @@ export default async function handler(req, res) {
   try {
     const { team_name, patente, nome } = req.body;
 
-    console.log('Recebido:', { team_name, patente, nome });
+    console.log('Inserindo:', { team_name, patente, nome });
 
     const { data, error } = await supabase
       .from('fomio_teams')
       .insert([{ 
         team_name, 
         patente, 
-        nome,
-        created_at: new Date().toISOString()
+        nome
       }])
       .select();
 
-    if (error) {
-      console.error('Erro Supabase:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     console.log('Inserido com sucesso:', data);
     res.status(200).json({ success: true, data });
 
   } catch (error) {
-    console.error('Erro geral:', error);
+    console.error('Insert Error:', error);
     res.status(500).json({ error: error.message });
   }
 }
