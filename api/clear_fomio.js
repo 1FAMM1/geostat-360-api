@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
+// ✅ Credenciais corretas do fomio.js
 const supabaseUrl = 'https://rjkbodfqsvckvnhjwmhg.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2JvZGZxc3Zja3ZuaGp3bWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxNjM3NjQsImV4cCI6MjA2MzczOTc2NH0.jX5OPZkz1JSSwrahCoFzqGYw8tYkgE8isbn12uP43-0'
 const supabase = createClient(supabaseUrl, supabaseKey)
@@ -25,8 +26,9 @@ export default async function handler(req, res) {
 
     if (error) throw error;
 
-    res.status(200).json({ success: true, message: 'Data cleared', count: data?.length || 0 });
+    res.status(200).json({ success: true, message: 'All data cleared' });
   } catch (error) {
+    console.error('Clear Error:', error);
     res.status(500).json({ error: error.message });
   }
 }
