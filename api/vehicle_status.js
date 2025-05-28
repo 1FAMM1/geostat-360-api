@@ -44,6 +44,10 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const { vehicle, status } = req.body
 
+      if (!vehicle || !status) {
+        return res.status(400).json({ error: 'Veículo e status são obrigatórios.' })
+      }
+
       const { error: updateError } = await supabase
         .from('vehicle_status')
         .update({
@@ -72,20 +76,37 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      const { vehicle, inop } = req.body
+      const { vehicle, inop, current_status } = req.body
+
+      if (!vehicle) {
+        return res.status(400).json({ error: 'Veículo é obrigatório.' })
+      }
+
+      const updates = {}
+
+      if (typeof inop === 'boolean') {
+        updates.is_inop = inop
+      }
+
+      if (typeof current_status === 'string') {
+        updates.current_status = current_status
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'Nenhum dado para atualizar.' })
+      }
 
       const { error } = await supabase
         .from('vehicle_status')
-        .update({
-          is_inop: inop
-        })
+        .update(updates)
         .eq('vehicle', vehicle)
 
       if (error) throw error
 
       return res.json({
         success: true,
-        message: `${vehicle} marcado como ${inop ? 'INOP' : 'Operacional'}`
+        message: `${vehicle} atualizado.`,
+        updates
       })
     }
 
