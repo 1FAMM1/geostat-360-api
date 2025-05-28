@@ -17,17 +17,15 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      // BUSCAR todos os status
       const { data: vehicles, error } = await supabase
         .from('vehicle_status')
         .select('*')
 
       if (error) throw error
 
-      // Converter para formato esperado pela app
       const vehicleStatuses = {}
       const vehicleINOP = {}
-      
+
       vehicles.forEach(vehicle => {
         if (vehicle.current_status && vehicle.current_status !== 'Disponível') {
           vehicleStatuses[vehicle.vehicle] = vehicle.current_status
@@ -44,21 +42,17 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      // ENVIAR status operacional (Saída Und., Chegada TO, etc.)
       const { vehicle, status } = req.body
 
-      // Atualizar status atual
       const { error: updateError } = await supabase
         .from('vehicle_status')
         .update({
-          current_status: status,
-          last_update: new Date().toISOString()
+          current_status: status
         })
         .eq('vehicle', vehicle)
 
       if (updateError) throw updateError
 
-      // Adicionar ao histórico
       const { error: historyError } = await supabase
         .from('status_history')
         .insert({
@@ -69,16 +63,14 @@ export default async function handler(req, res) {
 
       if (historyError) throw historyError
 
-      // Se for "Chegada Und." - limpar status (volta a Disponível)
       if (status === 'Chegada Und.') {
         const { error: clearError } = await supabase
           .from('vehicle_status')
           .update({
-            current_status: 'Disponível',
-            last_update: new Date().toISOString()
+            current_status: 'Disponível'
           })
           .eq('vehicle', vehicle)
-        
+
         if (clearError) console.log('Clear error:', clearError)
       }
 
@@ -89,20 +81,17 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      // ALTERAR status INOP/OP
       const { vehicle, inop } = req.body
 
       const { error } = await supabase
         .from('vehicle_status')
         .update({
-          is_inop: inop,
-          last_update: new Date().toISOString()
+          is_inop: inop
         })
         .eq('vehicle', vehicle)
 
       if (error) throw error
 
-      // Adicionar ao histórico
       const status = inop ? 'INOP' : 'Operacional'
       const { error: historyError } = await supabase
         .from('status_history')
