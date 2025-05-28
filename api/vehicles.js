@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  'https://rjkbodfqsvckvnhjwmhg.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2JvZGZxc3Zja3ZuaGp3bWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxNjM3NjQsImV4cCI6MjA2MzczOTc2NH0.jX5OPZkz1JSSwrahCoFzqGYw8tYkgE8isbn12uP43-0'
-)
+const supabaseUrl = 'https://rjkbodfqsvckvnhjwmhg.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2JvZGZxc3Zja3ZuaGp3bWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxNjM3NjQsImV4cCI6MjA2MzczOTc2NH0.jX5OPZkz1JSSwrahCoFzqGYw8tYkgE8isbn12uP43-0'
+
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -14,52 +14,31 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      // Pega todos os veículos e seus status
       const { data, error } = await supabase
         .from('vehicle_status')
-        .select('vehicle, status')
+        .select('vehicle')
         .order('vehicle', { ascending: true })
 
       if (error) throw error
 
-      // Retorna objeto com veículo: status
-      const vehicleStatuses = {}
-      data.forEach(({ vehicle, status }) => {
-        vehicleStatuses[vehicle] = status
-      })
-
-      return res.status(200).json({
-        success: true,
-        vehicleStatuses,
-        timestamp: Date.now(),
-      })
+      const vehicles = data.map((v) => v.vehicle)
+      return res.status(200).json({ success: true, vehicles })
 
     } else if (req.method === 'POST') {
-      const { vehicle, status } = req.body
-      if (!vehicle || !status) {
-        return res.status(400).json({
-          success: false,
-          error: 'Veículo e status são obrigatórios.'
-        })
-      }
+      const { vehicle } = req.body
+      if (!vehicle) return res.status(400).json({ success: false, error: 'Parâmetro "vehicle" ausente' })
 
-      // Inserir ou atualizar (upsert) o veículo com status
       const { error } = await supabase
         .from('vehicle_status')
-        .upsert([{ vehicle, status }], { onConflict: 'vehicle' })
+        .insert([{ vehicle }])
 
       if (error) throw error
-
       return res.status(200).json({ success: true })
 
     } else if (req.method === 'DELETE') {
+      // Recebe o veículo para deletar via query string, ex: DELETE /api/vehicles?vehicle=VTTP-99
       const { vehicle } = req.query
-      if (!vehicle) {
-        return res.status(400).json({
-          success: false,
-          error: 'Parâmetro "vehicle" é obrigatório.'
-        })
-      }
+      if (!vehicle) return res.status(400).json({ success: false, error: 'Parâmetro "vehicle" ausente' })
 
       const { error } = await supabase
         .from('vehicle_status')
@@ -67,11 +46,11 @@ export default async function handler(req, res) {
         .eq('vehicle', vehicle)
 
       if (error) throw error
-
       return res.status(200).json({ success: true })
-    } else {
-      return res.status(405).json({ success: false, error: 'Método não permitido' })
     }
+
+    return res.status(405).json({ success: false, error: 'Método não permitido' })
+
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message })
   }
