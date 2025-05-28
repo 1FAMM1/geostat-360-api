@@ -1,57 +1,110 @@
-import { createClient } from '@supabase/supabase-js'
+const API_URL = 'https://geostat-360-api.vercel.app/api/vehicle_status';
 
-const supabaseUrl = 'https://rjkbodfqsvckvnhjwmhg.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2JvZGZxc3Zja3ZuaGp3bWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxNjM3NjQsImV4cCI6MjA2MzczOTc2NH0.jX5OPZkz1JSSwrahCoFzqGYw8tYkgE8isbn12uP43-0'
+const vehicleSelect = document.getElementById('vehicleSelect');
+const vehicleInput = document.getElementById('vehicleInput');
+const btnAdd = document.getElementById('btnAdd');
+const btnRemove = document.getElementById('btnRemove');
+const statusMessage = document.getElementById('statusMessage');
 
-const supabase = createClient(supabaseUrl, supabaseKey)
+function showStatus(message, type = '') {
+  statusMessage.textContent = message;
+  statusMessage.className = 'status ' + type;
+}
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-
-  if (req.method === 'OPTIONS') return res.status(200).end()
-
+async function loadVehicles() {
+  showStatus('Carregando veículos...', 'loading');
   try {
-    if (req.method === 'GET') {
-      const { data, error } = await supabase
-        .from('vehicle_status')
-        .select('vehicle')
-        .order('vehicle', { ascending: true })
-
-      if (error) throw error
-
-      const vehicles = data.map((v) => v.vehicle)
-      return res.status(200).json({ success: true, vehicles })
-
-    } else if (req.method === 'POST') {
-      const { vehicle } = req.body
-      if (!vehicle) return res.status(400).json({ success: false, error: 'Parâmetro "vehicle" ausente' })
-
-      const { error } = await supabase
-        .from('vehicle_status')
-        .insert([{ vehicle }])
-
-      if (error) throw error
-      return res.status(200).json({ success: true })
-
-    } else if (req.method === 'DELETE') {
-      // Recebe o veículo para deletar via query string, ex: DELETE /api/vehicles?vehicle=VTTP-99
-      const { vehicle } = req.query
-      if (!vehicle) return res.status(400).json({ success: false, error: 'Parâmetro "vehicle" ausente' })
-
-      const { error } = await supabase
-        .from('vehicle_status')
-        .delete()
-        .eq('vehicle', vehicle)
-
-      if (error) throw error
-      return res.status(200).json({ success: true })
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    if (data.success && data.vehicleStatuses) {
+      vehicleSelect.innerHTML = '';
+      const vehicles = Object.keys(data.vehicleStatuses);
+      vehicles.forEach(vehicle => {
+        const option = document.createElement('option');
+        option.value = vehicle;
+        option.textContent = vehicle;
+        vehicleSelect.appendChild(option);
+      });
+      if (vehicles.length > 0) vehicleSelect.value = vehicles[0];
+      showStatus('Veículos carregados com sucesso!', 'success');
+    } else {
+      showStatus('❌ Erro: dados inválidos do servidor', 'error');
     }
-
-    return res.status(405).json({ success: false, error: 'Método não permitido' })
-
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message })
+  } catch (error) {
+    showStatus('❌ Erro ao carregar veículos: ' + error.message, 'error');
   }
 }
+
+async function addVehicle() {
+  const novoVeiculo = vehicleInput.value.trim();
+  if (!novoVeiculo) {
+    showStatus('❌ Informe o código do veículo para adicionar.', 'error');
+    return;
+  }
+
+  // Vou usar status fixo "Disponível no Quartel" só pra exemplo
+  const status = "Disponível no Quartel";
+
+  showStatus('Adicionando veículo...', 'loading');
+  btnAdd.disabled = true;
+  btnRemove.disabled = true;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vehicle: novoVeiculo, status }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      showStatus(`✅ Veículo "${novoVeiculo}" adicionado!`, 'success');
+      vehicleInput.value = '';
+      await loadVehicles();
+    } else {
+      showStatus('❌ Erro ao adicionar: ' + (data.error || 'Desconhecido'), 'error');
+    }
+  } catch (error) {
+    showStatus('❌ Erro ao adicionar veículo: ' + error.message, 'error');
+  } finally {
+    btnAdd.disabled = false;
+    btnRemove.disabled = false;
+  }
+}
+
+async function removeVehicle() {
+  const veiculoSelecionado = vehicleSelect.value;
+  if (!veiculoSelecionado) {
+    showStatus('❌ Selecione um veículo para remover.', 'error');
+    return;
+  }
+  if (!confirm(`Tem certeza que deseja remover o veículo "${veiculoSelecionado}"?`)) return;
+
+  showStatus('Removendo veículo...', 'loading');
+  btnAdd.disabled = true;
+  btnRemove.disabled = true;
+
+  try {
+    // Envia o veículo no query string (GET e DELETE assim funcionam melhor)
+    const res = await fetch(`${API_URL}?vehicle=${encodeURIComponent(veiculoSelecionado)}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    if (data.success) {
+      showStatus(`✅ Veículo "${veiculoSelecionado}" removido!`, 'success');
+      await loadVehicles();
+    } else {
+      showStatus('❌ Erro ao remover: ' + (data.error || 'Desconhecido'), 'error');
+    }
+  } catch (error) {
+    showStatus('❌ Erro ao remover veículo: ' + error.message, 'error');
+  } finally {
+    btnAdd.disabled = false;
+    btnRemove.disabled = false;
+  }
+}
+
+btnAdd.addEventListener('click', addVehicle);
+btnRemove.addEventListener('click', removeVehicle);
+
+loadVehicles();
