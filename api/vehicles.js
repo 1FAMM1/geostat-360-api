@@ -1,107 +1,78 @@
-const API_URL = 'https://geostat-360-api.vercel.app/api/vehicle_status';
+import { createClient } from '@supabase/supabase-js'
 
-const vehicleSelect = document.getElementById('vehicleSelect');
-const vehicleInput = document.getElementById('vehicleInput');
-const btnAdd = document.getElementById('btnAdd');
-const btnRemove = document.getElementById('btnRemove');
-const statusMessage = document.getElementById('statusMessage');
+const supabase = createClient(
+  'https://rjkbodfqsvckvnhjwmhg.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2JvZGZxc3Zja3ZuaGp3bWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxNjM3NjQsImV4cCI6MjA2MzczOTc2NH0.jX5OPZkz1JSSwrahCoFzqGYw8tYkgE8isbn12uP43-0'
+)
 
-// Função para exibir status na tela
-function showStatus(message, type = '') {
-  statusMessage.textContent = message;
-  statusMessage.className = 'status ' + type;
-}
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
-// Carrega veículos do backend e popula select
-async function loadVehicles() {
-  showStatus('Carregando veículos...', 'loading');
+  if (req.method === 'OPTIONS') return res.status(200).end()
+
   try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
-    if (data.success && data.vehicleStatuses) {
-      const vehicles = Object.keys(data.vehicleStatuses);
-      vehicleSelect.innerHTML = '';
-      vehicles.forEach(vehicle => {
-        const option = document.createElement('option');
-        option.value = vehicle;
-        option.textContent = vehicle;
-        vehicleSelect.appendChild(option);
-      });
-      if (vehicles.length > 0) vehicleSelect.value = vehicles[0];
-      showStatus('Veículos carregados com sucesso!', 'success');
+    if (req.method === 'GET') {
+      // Pega todos os veículos e seus status
+      const { data, error } = await supabase
+        .from('vehicle_status')
+        .select('vehicle, status')
+        .order('vehicle', { ascending: true })
+
+      if (error) throw error
+
+      // Retorna objeto com veículo: status
+      const vehicleStatuses = {}
+      data.forEach(({ vehicle, status }) => {
+        vehicleStatuses[vehicle] = status
+      })
+
+      return res.status(200).json({
+        success: true,
+        vehicleStatuses,
+        timestamp: Date.now(),
+      })
+
+    } else if (req.method === 'POST') {
+      const { vehicle, status } = req.body
+      if (!vehicle || !status) {
+        return res.status(400).json({
+          success: false,
+          error: 'Veículo e status são obrigatórios.'
+        })
+      }
+
+      // Inserir ou atualizar (upsert) o veículo com status
+      const { error } = await supabase
+        .from('vehicle_status')
+        .upsert([{ vehicle, status }], { onConflict: 'vehicle' })
+
+      if (error) throw error
+
+      return res.status(200).json({ success: true })
+
+    } else if (req.method === 'DELETE') {
+      const { vehicle } = req.query
+      if (!vehicle) {
+        return res.status(400).json({
+          success: false,
+          error: 'Parâmetro "vehicle" é obrigatório.'
+        })
+      }
+
+      const { error } = await supabase
+        .from('vehicle_status')
+        .delete()
+        .eq('vehicle', vehicle)
+
+      if (error) throw error
+
+      return res.status(200).json({ success: true })
     } else {
-      showStatus('❌ Erro: dados inválidos do servidor', 'error');
+      return res.status(405).json({ success: false, error: 'Método não permitido' })
     }
-  } catch (error) {
-    showStatus('❌ Erro ao carregar veículos: ' + error.message, 'error');
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message })
   }
 }
-
-// Adiciona veículo via POST
-async function addVehicle() {
-  const novoVeiculo = vehicleInput.value.trim();
-  if (!novoVeiculo) {
-    showStatus('❌ Informe o código do veículo para adicionar.', 'error');
-    return;
-  }
-  showStatus('Adicionando veículo...', 'loading');
-  btnAdd.disabled = true;
-  btnRemove.disabled = true;
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vehicle: novoVeiculo, status: 'Disponível no Quartel' }) // status obrigatório
-    });
-    const data = await res.json();
-    if (data.success) {
-      showStatus(`✅ Veículo "${novoVeiculo}" adicionado!`, 'success');
-      vehicleInput.value = '';
-      await loadVehicles();
-    } else {
-      showStatus('❌ Erro ao adicionar: ' + (data.error || 'Desconhecido'), 'error');
-    }
-  } catch (error) {
-    showStatus('❌ Erro ao adicionar veículo: ' + error.message, 'error');
-  } finally {
-    btnAdd.disabled = false;
-    btnRemove.disabled = false;
-  }
-}
-
-// Remove veículo selecionado via DELETE usando query string (sem body)
-async function removeVehicle() {
-  const veiculoSelecionado = vehicleSelect.value;
-  if (!veiculoSelecionado) {
-    showStatus('❌ Selecione um veículo para remover.', 'error');
-    return;
-  }
-  if (!confirm(`Tem certeza que deseja remover o veículo "${veiculoSelecionado}"?`)) return;
-  showStatus('Removendo veículo...', 'loading');
-  btnAdd.disabled = true;
-  btnRemove.disabled = true;
-  try {
-    const url = `${API_URL}?vehicle=${encodeURIComponent(veiculoSelecionado)}`;
-    const res = await fetch(url, {
-      method: 'DELETE'
-    });
-    const data = await res.json();
-    if (data.success) {
-      showStatus(`✅ Veículo "${veiculoSelecionado}" removido!`, 'success');
-      await loadVehicles();
-    } else {
-      showStatus('❌ Erro ao remover: ' + (data.error || 'Desconhecido'), 'error');
-    }
-  } catch (error) {
-    showStatus('❌ Erro ao remover veículo: ' + error.message, 'error');
-  } finally {
-    btnAdd.disabled = false;
-    btnRemove.disabled = false;
-  }
-}
-
-btnAdd.addEventListener('click', addVehicle);
-btnRemove.addEventListener('click', removeVehicle);
-
-// Carregar veículos inicialmente
-loadVehicles();
