@@ -10,7 +10,6 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
-    // Handle preflight
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
@@ -26,21 +25,13 @@ export default async function handler(req, res) {
         const { vehicle, status } = req.body;
         
         // Validações
-        if (!vehicle) {
+        if (!vehicle || !status) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Nome do veículo é obrigatório' 
+                error: 'Veículo e status são obrigatórios' 
             });
         }
         
-        if (!status) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Status é obrigatório' 
-            });
-        }
-        
-        // Verificar formato
         if (!/^[A-Z]{4}-\d{2}$/.test(vehicle)) {
             return res.status(400).json({ 
                 success: false, 
@@ -49,7 +40,7 @@ export default async function handler(req, res) {
         }
         
         // Verificar se veículo já existe
-        const { data: existingVehicle, error: checkError } = await supabase
+        const { data: existingVehicle } = await supabase
             .from('vehicles')
             .select('vehicle')
             .eq('vehicle', vehicle)
@@ -62,13 +53,13 @@ export default async function handler(req, res) {
             });
         }
         
-        // Inserir novo veículo
+        // Inserir novo veículo (só campos essenciais)
         const { data, error } = await supabase
             .from('vehicles')
             .insert([
                 { 
                     vehicle: vehicle,
-                    current_status: status,
+                    status: status,
                     is_inop: false
                 }
             ])
@@ -78,7 +69,7 @@ export default async function handler(req, res) {
             console.error('Erro Supabase:', error);
             return res.status(500).json({ 
                 success: false, 
-                error: 'Erro ao salvar no banco de dados: ' + error.message 
+                error: 'Erro ao salvar: ' + error.message 
             });
         }
         
@@ -86,15 +77,14 @@ export default async function handler(req, res) {
             success: true, 
             message: `Veículo ${vehicle} adicionado com sucesso!`,
             vehicle: vehicle,
-            status: status,
-            data: data
+            status: status
         });
         
     } catch (error) {
-        console.error('Erro geral:', error);
+        console.error('Erro:', error);
         return res.status(500).json({ 
             success: false, 
-            error: 'Erro interno do servidor: ' + error.message 
+            error: 'Erro interno: ' + error.message 
         });
     }
 }
