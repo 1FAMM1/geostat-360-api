@@ -1,110 +1,66 @@
-const API_URL = 'https://geostat-360-api.vercel.app/api/vehicle_status';
+import { createClient } from '@supabase/supabase-js'
 
-const vehicleSelect = document.getElementById('vehicleSelect');
-const vehicleInput = document.getElementById('vehicleInput');
-const btnAdd = document.getElementById('btnAdd');
-const btnRemove = document.getElementById('btnRemove');
-const statusMessage = document.getElementById('statusMessage');
+const supabaseUrl = 'https://rjkbodfqsvckvnhjwmhg.supabase.co'
+const supabaseKey = 'SEU_SUPABASE_KEY_AQUI'
+const supabase = createClient(supabaseUrl, supabaseKey)
 
-function showStatus(message, type = '') {
-  statusMessage.textContent = message;
-  statusMessage.className = 'status ' + type;
-}
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
-async function loadVehicles() {
-  showStatus('Carregando veículos...', 'loading');
-  try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
-    if (data.success && data.vehicleStatuses) {
-      vehicleSelect.innerHTML = '';
-      const vehicles = Object.keys(data.vehicleStatuses);
-      vehicles.forEach(vehicle => {
-        const option = document.createElement('option');
-        option.value = vehicle;
-        option.textContent = vehicle;
-        vehicleSelect.appendChild(option);
-      });
-      if (vehicles.length > 0) vehicleSelect.value = vehicles[0];
-      showStatus('Veículos carregados com sucesso!', 'success');
-    } else {
-      showStatus('❌ Erro: dados inválidos do servidor', 'error');
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
+
+  // GET: lista todos os veículos
+  if (req.method === 'GET') {
+    const { data, error } = await supabase
+      .from('vehicle_status')
+      .select('*')
+      .order('vehicle', { ascending: true })
+
+    if (error) return res.status(500).json({ success: false, error: error.message })
+
+    return res.status(200).json({ success: true, vehicles: data })
+  }
+
+  // POST: adiciona um veículo com status
+  if (req.method === 'POST') {
+    const { vehicle, status } = req.body
+
+    if (!vehicle || !status) {
+      return res.status(400).json({ success: false, error: 'Veículo e status são obrigatórios.' })
     }
-  } catch (error) {
-    showStatus('❌ Erro ao carregar veículos: ' + error.message, 'error');
+
+    // Inserir no supabase (pode usar upsert para atualizar se já existir)
+    const { data, error } = await supabase
+      .from('vehicle_status')
+      .upsert({ vehicle, status })
+
+    if (error) return res.status(500).json({ success: false, error: error.message })
+
+    return res.status(200).json({ success: true, message: 'Veículo adicionado/atualizado.' })
   }
-}
 
-async function addVehicle() {
-  const novoVeiculo = vehicleInput.value.trim();
-  if (!novoVeiculo) {
-    showStatus('❌ Informe o código do veículo para adicionar.', 'error');
-    return;
-  }
+  // DELETE: remove veículo pelo parâmetro vehicle na query string
+  if (req.method === 'DELETE') {
+    const { vehicle } = req.query
 
-  // Vou usar status fixo "Disponível no Quartel" só pra exemplo
-  const status = "Disponível no Quartel";
-
-  showStatus('Adicionando veículo...', 'loading');
-  btnAdd.disabled = true;
-  btnRemove.disabled = true;
-
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vehicle: novoVeiculo, status }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      showStatus(`✅ Veículo "${novoVeiculo}" adicionado!`, 'success');
-      vehicleInput.value = '';
-      await loadVehicles();
-    } else {
-      showStatus('❌ Erro ao adicionar: ' + (data.error || 'Desconhecido'), 'error');
+    if (!vehicle) {
+      return res.status(400).json({ success: false, error: 'Parâmetro "vehicle" ausente.' })
     }
-  } catch (error) {
-    showStatus('❌ Erro ao adicionar veículo: ' + error.message, 'error');
-  } finally {
-    btnAdd.disabled = false;
-    btnRemove.disabled = false;
+
+    const { error } = await supabase
+      .from('vehicle_status')
+      .delete()
+      .eq('vehicle', vehicle)
+
+    if (error) return res.status(500).json({ success: false, error: error.message })
+
+    return res.status(200).json({ success: true, message: `Veículo ${vehicle} removido.` })
   }
+
+  // Outros métodos não permitidos
+  return res.status(405).json({ success: false, error: 'Método não permitido' })
 }
-
-async function removeVehicle() {
-  const veiculoSelecionado = vehicleSelect.value;
-  if (!veiculoSelecionado) {
-    showStatus('❌ Selecione um veículo para remover.', 'error');
-    return;
-  }
-  if (!confirm(`Tem certeza que deseja remover o veículo "${veiculoSelecionado}"?`)) return;
-
-  showStatus('Removendo veículo...', 'loading');
-  btnAdd.disabled = true;
-  btnRemove.disabled = true;
-
-  try {
-    // Envia o veículo no query string (GET e DELETE assim funcionam melhor)
-    const res = await fetch(`${API_URL}?vehicle=${encodeURIComponent(veiculoSelecionado)}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const data = await res.json();
-    if (data.success) {
-      showStatus(`✅ Veículo "${veiculoSelecionado}" removido!`, 'success');
-      await loadVehicles();
-    } else {
-      showStatus('❌ Erro ao remover: ' + (data.error || 'Desconhecido'), 'error');
-    }
-  } catch (error) {
-    showStatus('❌ Erro ao remover veículo: ' + error.message, 'error');
-  } finally {
-    btnAdd.disabled = false;
-    btnRemove.disabled = false;
-  }
-}
-
-btnAdd.addEventListener('click', addVehicle);
-btnRemove.addEventListener('click', removeVehicle);
-
-loadVehicles();
