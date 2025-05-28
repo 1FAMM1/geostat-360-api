@@ -1,64 +1,14 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  'https://rjkbodfqsvckvnhjwmhg.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa2JvZGZxc3Zja3ZuaGp3bWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxNjM3NjQsImV4cCI6MjA2MzczOTc2NH0.jX5OPZkz1JSSwrahCoFzqGYw8tYkgE8isbn12uP43-0'
-)
-
-export default async function handler(req, res) {
-  // Headers CORS
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-  
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end()
-  }
-
-  try {
-    switch (req.method) {
-      case 'GET':
-        return await handleGet(req, res)
-      case 'POST':
-        return await handlePost(req, res)
-      case 'DELETE':
-        return await handleDelete(req, res)
-      default:
-        return res.status(405).json({ 
-          success: false, 
-          error: 'Method not allowed' 
-        })
-    }
-  } catch (err) {
-    console.error('API Error:', err)
-    return res.status(500).json({ 
-      success: false, 
-      error: err.message 
-    })
-  }
-}
-
-// GET - Listar veículos
-async function handleGet(req, res) {
-  const { data, error } = await supabase
-    .from('vehicle_status')
-    .select('vehicle')
-    .order('vehicle', { ascending: true })
-
-  if (error) throw error
-
-  const vehicles = data.map(v => v.vehicle)
-  
   return res.status(200).json({ 
     success: true, 
-    vehicles 
+    vehicleStatuses,
+    vehicleINOP,
+    timestamp: Date.now()
   })
 }
 
 // POST - Adicionar veículo
 async function handlePost(req, res) {
-  const { vehicle, status = 'ativo' } = req.body
+  const { vehicle, status = 'Disponível no Quartel', inop = false } = req.body
 
   // Validação
   if (!vehicle || typeof vehicle !== 'string' || vehicle.trim() === '') {
@@ -68,7 +18,7 @@ async function handlePost(req, res) {
     })
   }
 
-  const vehicleName = vehicle.trim()
+  const vehicleName = vehicle.trim().toUpperCase()
 
   // Verificar se já existe
   const { data: existing } = await supabase
@@ -89,7 +39,8 @@ async function handlePost(req, res) {
     .from('vehicle_status')
     .insert([{ 
       vehicle: vehicleName, 
-      status: status 
+      status: status,
+      inop: inop
     }])
     .select()
 
