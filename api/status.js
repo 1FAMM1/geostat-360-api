@@ -53,16 +53,6 @@ export default async function handler(req, res) {
 
       if (updateError) throw updateError
 
-      const { error: historyError } = await supabase
-        .from('status_history')
-        .insert({
-          vehicle,
-          status,
-          timestamp: new Date().toISOString()
-        })
-
-      if (historyError) throw historyError
-
       // Se chegou na unidade, volta a Disponível
       if (status === 'Chegada Und.') {
         const { error: clearError } = await supabase
@@ -93,20 +83,9 @@ export default async function handler(req, res) {
 
       if (error) throw error
 
-      const status = inop ? 'INOP' : 'Operacional'
-      const { error: historyError } = await supabase
-        .from('status_history')
-        .insert({
-          vehicle,
-          status,
-          timestamp: new Date().toISOString()
-        })
-
-      if (historyError) throw historyError
-
       return res.json({
         success: true,
-        message: `${vehicle} marcado como ${status}`
+        message: `${vehicle} marcado como ${inop ? 'INOP' : 'Operacional'}`
       })
     }
 
