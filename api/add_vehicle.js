@@ -59,7 +59,7 @@ export default async function handler(req, res) {
             .insert([
                 { 
                     vehicle: vehicle,
-                    status: status,
+                    current_status: status,
                     is_inop: false
                 }
             ])
