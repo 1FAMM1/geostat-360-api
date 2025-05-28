@@ -48,14 +48,13 @@ export default async function handler(req, res) {
       });
     }
 
-    // Inserir novo veículo
+    // Inserir novo veículo (SEM created_at)
     const { data, error } = await supabase
       .from('vehicle_status')
       .insert({ 
         vehicle: vehicle.toUpperCase(),
         status: status || 'Disponível no Quartel',
-        inop: inop || false,
-        created_at: new Date().toISOString()
+        inop: inop || false
       })
       .select();
 
