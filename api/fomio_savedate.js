@@ -24,15 +24,19 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Header text é obrigatório' });
     }
 
+    console.log('Salvando header:', header_text);
+
     // Limpar header anterior e inserir novo
-    await supabase.from('fomio_header').delete().neq('id', 0);
+    await supabase.from('fomio_date').delete().neq('id', 0);
     
     const { data, error } = await supabase
-      .from('fomio_header')
+      .from('fomio_date')
       .insert({ header_text })
       .select();
 
     if (error) throw error;
+
+    console.log('Header salvo com sucesso');
 
     res.status(200).json({ 
       success: true, 
