@@ -39,12 +39,21 @@ export default async function handler(req, res) {
             });
         }
         
-        // Verificar se veículo já existe
-        const { data: existingVehicle } = await supabase
-            .from('vehicles')
+        // Verificar se veículo já existe na tabela correta
+        const { data: existingVehicle, error: checkError } = await supabase
+            .from('vehicle_status')  // ← Nome correto da tabela
             .select('vehicle')
             .eq('vehicle', vehicle)
             .single();
+            
+        if (checkError && checkError.code !== 'PGRST116') {
+            // PGRST116 = "not found" é OK, outros erros não
+            console.error('Erro ao verificar veículo:', checkError);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Erro ao verificar veículo existente: ' + checkError.message 
+            });
+        }
             
         if (existingVehicle) {
             return res.status(409).json({ 
@@ -53,20 +62,20 @@ export default async function handler(req, res) {
             });
         }
         
-        // Inserir novo veículo (só campos essenciais)
+        // Inserir novo veículo com nomes corretos dos campos
         const { data, error } = await supabase
-            .from('vehicles')
+            .from('vehicle_status')  // ← Nome correto da tabela
             .insert([
                 { 
                     vehicle: vehicle,
-                    current_status: status,
+                    current_status: status,  // ← Nome correto do campo
                     is_inop: false
                 }
             ])
             .select();
         
         if (error) {
-            console.error('Erro Supabase:', error);
+            console.error('Erro Supabase ao inserir:', error);
             return res.status(500).json({ 
                 success: false, 
                 error: 'Erro ao salvar: ' + error.message 
@@ -77,11 +86,12 @@ export default async function handler(req, res) {
             success: true, 
             message: `Veículo ${vehicle} adicionado com sucesso!`,
             vehicle: vehicle,
-            status: status
+            status: status,
+            data: data
         });
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('Erro geral:', error);
         return res.status(500).json({ 
             success: false, 
             error: 'Erro interno: ' + error.message 
