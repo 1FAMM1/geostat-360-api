@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   try {
     const { data, error } = await supabase
-      .from('vehicle_status')
+      .from('status')
       .select('vehicle')
       .order('vehicle', { ascending: true })
 
