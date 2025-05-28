@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   try {
     const { data, error } = await supabase
-      .from('fomio_header')
+      .from('fomio_date')
       .select('header_text, updated_at')
       .order('updated_at', { ascending: false })
       .limit(1);
