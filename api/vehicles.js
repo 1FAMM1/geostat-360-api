@@ -1,66 +1,80 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://rjkbodfqsvckvnhjwmhg.supabase.co'
-const supabaseKey = 'SEU_SUPABASE_KEY_AQUI'
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabaseUrl = 'https://SEU-SUPABASE-URL.supabase.co';
+const supabaseKey = 'SUA-CHAVE-SECRETA';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end()
+    return res.status(200).end();
   }
 
-  // GET: lista todos os veículos
-  if (req.method === 'GET') {
-    const { data, error } = await supabase
-      .from('vehicle_status')
-      .select('*')
-      .order('vehicle', { ascending: true })
+  try {
+    if (req.method === 'GET') {
+      // Buscar veículos
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select('*')
+        .order('vehicle', { ascending: true });
+      if (error) throw error;
 
-    if (error) return res.status(500).json({ success: false, error: error.message })
-
-    return res.status(200).json({ success: true, vehicles: data })
-  }
-
-  // POST: adiciona um veículo com status
-  if (req.method === 'POST') {
-    const { vehicle, status } = req.body
-
-    if (!vehicle || !status) {
-      return res.status(400).json({ success: false, error: 'Veículo e status são obrigatórios.' })
+      return res.status(200).json({ success: true, vehicles: data });
     }
 
-    // Inserir no supabase (pode usar upsert para atualizar se já existir)
-    const { data, error } = await supabase
-      .from('vehicle_status')
-      .upsert({ vehicle, status })
+    if (req.method === 'POST') {
+      // Adicionar veículo
+      const { vehicle, status } = req.body;
 
-    if (error) return res.status(500).json({ success: false, error: error.message })
+      if (!vehicle || !status) {
+        return res.status(400).json({ success: false, error: 'Veículo e status são obrigatórios.' });
+      }
 
-    return res.status(200).json({ success: true, message: 'Veículo adicionado/atualizado.' })
-  }
+      // Verifica se já existe o veículo
+      const { data: existing, error: errCheck } = await supabase
+        .from('vehicles')
+        .select('vehicle')
+        .eq('vehicle', vehicle);
 
-  // DELETE: remove veículo pelo parâmetro vehicle na query string
-  if (req.method === 'DELETE') {
-    const { vehicle } = req.query
+      if (errCheck) throw errCheck;
 
-    if (!vehicle) {
-      return res.status(400).json({ success: false, error: 'Parâmetro "vehicle" ausente.' })
+      if (existing.length > 0) {
+        return res.status(400).json({ success: false, error: 'Veículo já existe.' });
+      }
+
+      const { error } = await supabase
+        .from('vehicles')
+        .insert([{ vehicle, status }]);
+
+      if (error) throw error;
+
+      return res.status(200).json({ success: true });
     }
 
-    const { error } = await supabase
-      .from('vehicle_status')
-      .delete()
-      .eq('vehicle', vehicle)
+    if (req.method === 'DELETE') {
+      // Remover veículo
+      const { vehicle } = req.query;
 
-    if (error) return res.status(500).json({ success: false, error: error.message })
+      if (!vehicle) {
+        return res.status(400).json({ success: false, error: 'Veículo é obrigatório para remoção.' });
+      }
 
-    return res.status(200).json({ success: true, message: `Veículo ${vehicle} removido.` })
+      const { error } = await supabase
+        .from('vehicles')
+        .delete()
+        .eq('vehicle', vehicle);
+
+      if (error) throw error;
+
+      return res.status(200).json({ success: true });
+    }
+
+    // Método não permitido
+    return res.status(405).json({ success: false, error: 'Método não permitido.' });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
   }
-
-  // Outros métodos não permitidos
-  return res.status(405).json({ success: false, error: 'Método não permitido' })
 }
