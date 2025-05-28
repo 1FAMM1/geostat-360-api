@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-
+  
   if (req.method === 'OPTIONS') {
     return res.status(200).end()
   }
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       // Converter para formato esperado pela app
       const vehicleStatuses = {}
       const vehicleINOP = {}
-
+      
       vehicles.forEach(vehicle => {
         if (vehicle.current_status && vehicle.current_status !== 'Disponível') {
           vehicleStatuses[vehicle.vehicle] = vehicle.current_status
@@ -45,15 +45,14 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       // ENVIAR status operacional (Saída Und., Chegada TO, etc.)
-      const { vehicle, status, coordinates } = req.body
+      const { vehicle, status } = req.body
 
       // Atualizar status atual
       const { error: updateError } = await supabase
         .from('vehicle_status')
         .update({
           current_status: status,
-          last_update: new Date().toISOString(),
-          coordinates: coordinates
+          last_update: new Date().toISOString()
         })
         .eq('vehicle', vehicle)
 
@@ -65,7 +64,6 @@ export default async function handler(req, res) {
         .insert({
           vehicle,
           status,
-          coordinates,
           timestamp: new Date().toISOString()
         })
 
@@ -80,13 +78,13 @@ export default async function handler(req, res) {
             last_update: new Date().toISOString()
           })
           .eq('vehicle', vehicle)
-
+        
         if (clearError) console.log('Clear error:', clearError)
       }
 
-      return res.json({ 
-        success: true, 
-        message: `${vehicle} - ${status}` 
+      return res.json({
+        success: true,
+        message: `${vehicle} - ${status}`
       })
     }
 
@@ -116,9 +114,9 @@ export default async function handler(req, res) {
 
       if (historyError) throw historyError
 
-      return res.json({ 
-        success: true, 
-        message: `${vehicle} marcado como ${status}` 
+      return res.json({
+        success: true,
+        message: `${vehicle} marcado como ${status}`
       })
     }
 
@@ -126,9 +124,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('API Error:', error)
-    return res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    return res.status(500).json({
+      success: false,
+      error: error.message
     })
   }
 }
