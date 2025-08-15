@@ -5,7 +5,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 export default async function handler(req, res) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
@@ -15,8 +14,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // === VEHICLE.JS REPLICA ===
-    // GET /vehicles?action=list
     if (req.method === 'GET' && req.query.action === 'list') {
       const { data, error } = await supabase
         .from('vehicle_status')
@@ -29,7 +26,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, vehicles })
     }
 
-    // === VEHICLE_STATUS.JS REPLICA ===
     if (req.method === 'GET' && !req.query.action) {
       const { data: vehicles, error } = await supabase
         .from('vehicle_status')
@@ -56,12 +52,9 @@ export default async function handler(req, res) {
       })
     }
 
-    // === VEHICLES_ADD.JS REPLICA ===
-    // POST /vehicles com action=add OU se tem vehicle+status mas não tem action
     if (req.method === 'POST' && (req.body.action === 'add' || (!req.body.action && req.body.vehicle && req.body.status && !req.body.inop))) {
       const { vehicle, status } = req.body
       
-      // Validações
       if (!vehicle || !status) {
         return res.status(400).json({ 
           success: false, 
@@ -76,7 +69,6 @@ export default async function handler(req, res) {
         })
       }
       
-      // Verificar se veículo já existe
       const { data: existingVehicle, error: checkError } = await supabase
         .from('vehicle_status')
         .select('vehicle')
@@ -98,7 +90,6 @@ export default async function handler(req, res) {
         })
       }
       
-      // Inserir novo veículo
       const { data, error } = await supabase
         .from('vehicle_status')
         .insert([
@@ -127,8 +118,6 @@ export default async function handler(req, res) {
       })
     }
 
-    // === VEHICLE_STATUS.JS REPLICA - UPDATE STATUS ===
-    // POST /vehicles sem action (atualizar status)
     if (req.method === 'POST' && !req.body.action) {
       const { vehicle, status } = req.body
       
@@ -144,8 +133,7 @@ export default async function handler(req, res) {
         .eq('vehicle', vehicle)
       
       if (updateError) throw updateError
-      
-      // Se chegou na unidade, volta a Disponível
+
       if (status === 'Chegada Und.') {
         const { error: clearError } = await supabase
           .from('vehicle_status')
@@ -163,7 +151,6 @@ export default async function handler(req, res) {
       })
     }
 
-    // === VEHICLE_STATUS.JS REPLICA - PUT ===
     if (req.method === 'PUT') {
       const { vehicle, inop, current_status } = req.body
       
@@ -199,7 +186,6 @@ export default async function handler(req, res) {
       })
     }
 
-    // === VEHICLES_DELETE.JS REPLICA ===
     if (req.method === 'DELETE') {
       const { vehicle } = req.query
       
@@ -211,8 +197,7 @@ export default async function handler(req, res) {
       }
       
       console.log(`Tentando deletar veículo: ${vehicle}`)
-      
-      // Verificar se o veículo existe antes de deletar
+
       const { data: existingVehicle, error: checkError } = await supabase
         .from('vehicle_status')
         .select('vehicle')
@@ -227,8 +212,7 @@ export default async function handler(req, res) {
       }
       
       if (checkError) throw checkError
-      
-      // Deletar o veículo específico
+
       const { data: deleteData, error: deleteError } = await supabase
         .from('vehicle_status')
         .delete()
