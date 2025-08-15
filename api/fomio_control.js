@@ -5,7 +5,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 export default async function handler(req, res) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -15,7 +14,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Extrair a ação da query string ou do body
+    
     const action = req.query.action || req.body?.action;
 
     switch (action) {
@@ -44,7 +43,7 @@ export default async function handler(req, res) {
         return await handleGetHeader(req, res);
       
       default:
-        // Se não especificar ação, manter comportamento original do fomio.js
+
         return await handleLegacyRouting(req, res);
     }
 
@@ -57,9 +56,6 @@ export default async function handler(req, res) {
   }
 }
 
-// ===== FUNÇÕES PRINCIPAIS =====
-
-// GET /api/fomio?action=get_teams
 async function handleGetTeams(req, res) {
   const { data: teams, error } = await supabase
     .from('fomio_teams')
@@ -69,7 +65,6 @@ async function handleGetTeams(req, res) {
 
   if (error) throw error;
 
-  // Organizar por equipa
   const teamData = {};
   teams.forEach(member => {
     if (!teamData[member.team_name]) {
@@ -89,7 +84,6 @@ async function handleGetTeams(req, res) {
   });
 }
 
-// POST /api/fomio?action=update_team
 async function handleUpdateTeam(req, res) {
   const { team_name, members } = req.body;
 
@@ -100,7 +94,6 @@ async function handleUpdateTeam(req, res) {
     });
   }
 
-  // 1. Apagar todos os membros da equipa
   const { error: deleteError } = await supabase
     .from('fomio_teams')
     .delete()
@@ -108,7 +101,6 @@ async function handleUpdateTeam(req, res) {
 
   if (deleteError) throw deleteError;
 
-  // 2. Inserir novos membros (se houver)
   if (members.length > 0) {
     const membersToInsert = members.map(member => ({
       team_name,
@@ -129,7 +121,6 @@ async function handleUpdateTeam(req, res) {
   });
 }
 
-// DELETE /api/fomio?action=delete_team
 async function handleDeleteTeam(req, res) {
   const { team_name } = req.body;
 
@@ -153,7 +144,6 @@ async function handleDeleteTeam(req, res) {
   });
 }
 
-// POST /api/fomio?action=insert_member
 async function handleInsertMember(req, res) {
   const { team_name, patente, nome } = req.body;
 
@@ -178,12 +168,11 @@ async function handleInsertMember(req, res) {
   });
 }
 
-// DELETE /api/fomio?action=clear_all
 async function handleClearAll(req, res) {
   console.log('Iniciando limpeza da tabela...');
   
   try {
-    // Método 1: TRUNCATE direto via SQL
+
     const { data: truncateData, error: truncateError } = await supabase
       .rpc('sql', { 
         query: 'TRUNCATE TABLE fomio_teams RESTART IDENTITY CASCADE;' 
@@ -200,7 +189,6 @@ async function handleClearAll(req, res) {
 
     console.log('TRUNCATE falhou, tentando função personalizada...');
     
-    // Método 2: Função personalizada
     const { data: funcData, error: funcError } = await supabase
       .rpc('truncate_fomio_teams');
 
@@ -215,7 +203,6 @@ async function handleClearAll(req, res) {
 
     console.log('Função falhou, usando DELETE + reset manual...');
     
-    // Método 3: DELETE + reset manual
     const { data: deleteData, error: deleteError } = await supabase
       .from('fomio_teams')
       .delete()
@@ -223,7 +210,6 @@ async function handleClearAll(req, res) {
     
     if (deleteError) throw deleteError;
     
-    // Reset manual da sequence
     const { data: resetData, error: resetError } = await supabase
       .rpc('sql', { 
         query: "SELECT setval('fomio_teams_id_seq', 1, false);" 
@@ -243,9 +229,7 @@ async function handleClearAll(req, res) {
   }
 }
 
-// POST /api/fomio?action=reset_sequence
 async function handleResetSequence(req, res) {
-  // Usar a função que criamos no SQL
   const { data, error } = await supabase.rpc('reset_fomio_sequence');
   
   if (error) {
@@ -261,7 +245,6 @@ async function handleResetSequence(req, res) {
   });
 }
 
-// POST /api/fomio?action=save_header
 async function handleSaveHeader(req, res) {
   const { header_text } = req.body;
 
@@ -273,7 +256,6 @@ async function handleSaveHeader(req, res) {
 
   console.log('Salvando header:', header_text);
 
-  // Limpar header anterior e inserir novo
   await supabase.from('fomio_date').delete().neq('id', 0);
   
   const { data, error } = await supabase
@@ -292,7 +274,6 @@ async function handleSaveHeader(req, res) {
   });
 }
 
-// GET /api/fomio?action=get_header
 async function handleGetHeader(req, res) {
   const { data, error } = await supabase
     .from('fomio_date')
@@ -311,35 +292,27 @@ async function handleGetHeader(req, res) {
   });
 }
 
-// ===== COMPATIBILIDADE COM CÓDIGO ANTIGO =====
-
-// Manter comportamento original do fomio.js para compatibilidade
 async function handleLegacyRouting(req, res) {
   if (req.method === 'GET') {
     return await handleGetTeams(req, res);
   }
 
   if (req.method === 'POST') {
-    // Se tiver team_name e members, é update_team
     if (req.body.team_name && req.body.members) {
       return await handleUpdateTeam(req, res);
     }
-    // Se tiver header_text, é save_header
     if (req.body.header_text) {
       return await handleSaveHeader(req, res);
     }
-    // Se tiver team_name, patente e nome, é insert_member
     if (req.body.team_name && req.body.patente && req.body.nome) {
       return await handleInsertMember(req, res);
     }
   }
 
   if (req.method === 'DELETE') {
-    // Se tiver team_name, é delete_team
     if (req.body.team_name) {
       return await handleDeleteTeam(req, res);
     }
-    // Se não tiver nada específico, é clear_all
     return await handleClearAll(req, res);
   }
 
