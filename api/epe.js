@@ -25,9 +25,9 @@ export default async function handler(req, res) {
     try {
         // Buscar todas as ocorrências da tabela do EPE
         const { data, error } = await supabase
-            .from('epe')  // Substitua pelo nome real da tabela
+            .from('epe_status')  // Nome correto da tabela
             .select('*')
-            .order('created_at', { ascending: false }) // opcional: ordenar por data
+            .order('id', { ascending: false }) // Ordenando pelo id
 
         if (error) {
             console.error('Erro Supabase ao buscar dados do EPE:', error)
