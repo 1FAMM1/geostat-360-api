@@ -57,8 +57,8 @@ export default async function handler(req, res) {
     }
 
     // === VEHICLES_ADD.JS REPLICA ===
-    // POST /vehicles com action=add
-    if (req.method === 'POST' && req.body.action === 'add') {
+    // POST /vehicles com action=add OU se tem vehicle+status mas não tem action
+    if (req.method === 'POST' && (req.body.action === 'add' || (!req.body.action && req.body.vehicle && req.body.status && !req.body.inop))) {
       const { vehicle, status } = req.body
       
       // Validações
