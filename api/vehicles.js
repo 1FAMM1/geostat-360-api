@@ -62,6 +62,14 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const { action, vehicle, status } = req.body
       
+      // Validar se o body existe
+      if (!req.body) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Body da requisição não encontrado' 
+        })
+      }
+      
       // POST com action=create - Adicionar novo veículo
       if (action === 'create') {
         // Validações
