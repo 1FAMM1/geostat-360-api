@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const { action } = req.query
 
-      // GET /api/vehicles?action=list - Lista apenas os nomes dos veículos
+      // GET /api/vehicles?action=list - Lista apenas os nomes dos veículos (equivale a vehicle.js)
       if (action === 'list') {
         const { data, error } = await supabase
           .from('vehicle_status')
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, vehicles })
       }
       
-      // GET /api/vehicles - Lista todos os dados completos (comportamento padrão)
+      // GET /api/vehicles - Lista todos os dados completos (equivale a vehicle_status.js)
       const { data: vehicles, error } = await supabase
         .from('vehicle_status')
         .select('*')
