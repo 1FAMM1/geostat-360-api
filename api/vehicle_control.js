@@ -125,29 +125,29 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Veículo e status são obrigatórios.' })
       }
       
+      console.log(`📡 Atualizando ${vehicle} para: ${status}`)
+      
+      // Determinar status final correto
+      const finalStatus = status === 'Chegada Und.' ? 'Disponível' : status
+      
       const { error: updateError } = await supabase
         .from('vehicle_status')
         .update({
-          current_status: status
+          current_status: finalStatus
         })
         .eq('vehicle', vehicle)
       
-      if (updateError) throw updateError
-
-      if (status === 'Chegada Und.') {
-        const { error: clearError } = await supabase
-          .from('vehicle_status')
-          .update({
-            current_status: 'Disponível'
-          })
-          .eq('vehicle', vehicle)
-        
-        if (clearError) console.log('Erro ao limpar status:', clearError)
+      if (updateError) {
+        console.error('Erro ao atualizar status:', updateError)
+        throw updateError
       }
+
+      console.log(`✅ ${vehicle} atualizado para: ${finalStatus}`)
       
       return res.json({
         success: true,
-        message: `${vehicle} - ${status}`
+        message: `${vehicle} - ${finalStatus}`,
+        finalStatus: finalStatus
       })
     }
 
