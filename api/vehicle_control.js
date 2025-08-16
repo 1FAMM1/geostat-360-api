@@ -14,7 +14,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 📋 LISTAGEM
     if (req.method === 'GET' && req.query.action === 'list') {
       const { data, error } = await supabase
         .from('vehicle_status')
@@ -27,7 +26,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, vehicles })
     }
 
-    // 📋 STATUS COMPLETO
     if (req.method === 'GET' && !req.query.action) {
       const { data: vehicles, error } = await supabase
         .from('vehicle_status')
@@ -54,7 +52,6 @@ export default async function handler(req, res) {
       })
     }
 
-    // 🚀 INSERIR NOVO VEÍCULO
     if (req.method === 'POST' && req.body.action === 'add') {
       const { vehicle, status } = req.body
       
@@ -66,7 +63,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'Formato inválido. Use: XXXX-XX (ex: VFCI-01)' })
       }
       
-      // Verifica se já existe
       const { data: existingVehicle } = await supabase
         .from('vehicle_status')
         .select('vehicle')
@@ -90,8 +86,7 @@ export default async function handler(req, res) {
         data 
       })
     }
-
-    // 🔄 ATUALIZAR STATUS
+    
     if (req.method === 'POST' && !req.body.action) {
       const { vehicle, status } = req.body
       
@@ -101,7 +96,6 @@ export default async function handler(req, res) {
       
       console.log(`📡 Atualizando ${vehicle} para: ${status}`)
       
-      // "Chegada Und." volta para Disponível
       const finalStatus = status === 'Chegada Und.' ? 'Disponível' : status
       
       const { error: updateError } = await supabase
@@ -120,7 +114,6 @@ export default async function handler(req, res) {
       })
     }
 
-    // 🛠️ ATUALIZAÇÃO AVANÇADA
     if (req.method === 'PUT') {
       const { vehicle, inop, current_status } = req.body
       
@@ -146,7 +139,6 @@ export default async function handler(req, res) {
       return res.json({ success: true, message: `${vehicle} atualizado.`, updates })
     }
 
-    // 🗑️ DELETAR
     if (req.method === 'DELETE') {
       const { vehicle } = req.query
       
