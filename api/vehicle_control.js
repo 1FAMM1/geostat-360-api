@@ -14,6 +14,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    // 📋 LISTAGEM
     if (req.method === 'GET' && req.query.action === 'list') {
       const { data, error } = await supabase
         .from('vehicle_status')
@@ -26,6 +27,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, vehicles })
     }
 
+    // 📋 STATUS COMPLETO
     if (req.method === 'GET' && !req.query.action) {
       const { data: vehicles, error } = await supabase
         .from('vehicle_status')
@@ -52,105 +54,73 @@ export default async function handler(req, res) {
       })
     }
 
-    if (req.method === 'POST' && (req.body.action === 'add' || (!req.body.action && req.body.vehicle && req.body.status && !req.body.inop))) {
+    // 🚀 INSERIR NOVO VEÍCULO
+    if (req.method === 'POST' && req.body.action === 'add') {
       const { vehicle, status } = req.body
       
       if (!vehicle || !status) {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'Veículo e status são obrigatórios' 
-        })
+        return res.status(400).json({ success: false, error: 'Veículo e status são obrigatórios' })
       }
       
       if (!/^[A-Z]{4}-\d{2}$/.test(vehicle)) {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'Formato inválido. Use: XXXX-XX (ex: VFCI-01)' 
-        })
+        return res.status(400).json({ success: false, error: 'Formato inválido. Use: XXXX-XX (ex: VFCI-01)' })
       }
       
-      const { data: existingVehicle, error: checkError } = await supabase
+      // Verifica se já existe
+      const { data: existingVehicle } = await supabase
         .from('vehicle_status')
         .select('vehicle')
         .eq('vehicle', vehicle)
-        .single()
-        
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Erro ao verificar veículo:', checkError)
-        return res.status(500).json({ 
-          success: false, 
-          error: 'Erro ao verificar veículo existente: ' + checkError.message 
-        })
-      }
-        
+        .maybeSingle()
+      
       if (existingVehicle) {
-        return res.status(409).json({ 
-          success: false, 
-          error: `Veículo ${vehicle} já existe no sistema` 
-        })
+        return res.status(409).json({ success: false, error: `Veículo ${vehicle} já existe no sistema` })
       }
       
       const { data, error } = await supabase
         .from('vehicle_status')
-        .insert([
-          { 
-            vehicle: vehicle,
-            current_status: status,
-            is_inop: false
-          }
-        ])
+        .insert([{ vehicle, current_status: status, is_inop: false }])
         .select()
       
-      if (error) {
-        console.error('Erro Supabase ao inserir:', error)
-        return res.status(500).json({ 
-          success: false, 
-          error: 'Erro ao salvar: ' + error.message 
-        })
-      }
+      if (error) throw error
       
       return res.status(200).json({ 
         success: true, 
         message: `Veículo ${vehicle} adicionado com sucesso!`,
-        vehicle: vehicle,
-        status: status,
-        data: data
+        data 
       })
     }
 
+    // 🔄 ATUALIZAR STATUS
     if (req.method === 'POST' && !req.body.action) {
       const { vehicle, status } = req.body
       
       if (!vehicle || !status) {
-        return res.status(400).json({ error: 'Veículo e status são obrigatórios.' })
+        return res.status(400).json({ success: false, error: 'Veículo e status são obrigatórios.' })
       }
       
       console.log(`📡 Atualizando ${vehicle} para: ${status}`)
       
-      // Determinar status final correto
+      // "Chegada Und." volta para Disponível
       const finalStatus = status === 'Chegada Und.' ? 'Disponível' : status
       
       const { error: updateError } = await supabase
         .from('vehicle_status')
-        .update({
-          current_status: finalStatus
-        })
+        .update({ current_status: finalStatus })
         .eq('vehicle', vehicle)
       
-      if (updateError) {
-        console.error('Erro ao atualizar status:', updateError)
-        throw updateError
-      }
+      if (updateError) throw updateError
 
       console.log(`✅ ${vehicle} atualizado para: ${finalStatus}`)
       
       return res.json({
         success: true,
-        message: `${vehicle} - ${finalStatus}`,
-        finalStatus: finalStatus
+        message: `${vehicle} atualizado para: ${finalStatus}`,
+        finalStatus
       })
     }
 
+    // 🛠️ ATUALIZAÇÃO AVANÇADA
     if (req.method === 'PUT') {
       const { vehicle, inop, current_status } = req.body
       
@@ -159,14 +129,8 @@ export default async function handler(req, res) {
       }
       
       const updates = {}
-      
-      if (typeof inop === 'boolean') {
-        updates.is_inop = inop
-      }
-      
-      if (typeof current_status === 'string') {
-        updates.current_status = current_status
-      }
+      if (typeof inop === 'boolean') updates.is_inop = inop
+      if (typeof current_status === 'string') updates.current_status = current_status
       
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ error: 'Nenhum dado para atualizar.' })
@@ -179,53 +143,37 @@ export default async function handler(req, res) {
       
       if (error) throw error
       
-      return res.json({
-        success: true,
-        message: `${vehicle} atualizado.`,
-        updates
-      })
+      return res.json({ success: true, message: `${vehicle} atualizado.`, updates })
     }
 
+    // 🗑️ DELETAR
     if (req.method === 'DELETE') {
       const { vehicle } = req.query
       
       if (!vehicle) {
-        return res.status(400).json({
-          success: false,
-          error: 'Vehicle name is required in query parameter'
-        })
+        return res.status(400).json({ success: false, error: 'Vehicle name is required in query parameter' })
       }
       
-      console.log(`Tentando deletar veículo: ${vehicle}`)
-
-      const { data: existingVehicle, error: checkError } = await supabase
+      const { data: existingVehicle } = await supabase
         .from('vehicle_status')
         .select('vehicle')
         .eq('vehicle', vehicle)
-        .single()
+        .maybeSingle()
       
-      if (checkError && checkError.code === 'PGRST116') {
-        return res.status(404).json({
-          success: false,
-          error: `Vehicle '${vehicle}' not found`
-        })
+      if (!existingVehicle) {
+        return res.status(404).json({ success: false, error: `Vehicle '${vehicle}' not found` })
       }
-      
-      if (checkError) throw checkError
 
-      const { data: deleteData, error: deleteError } = await supabase
+      const { error: deleteError } = await supabase
         .from('vehicle_status')
         .delete()
         .eq('vehicle', vehicle)
       
       if (deleteError) throw deleteError
       
-      console.log(`Veículo ${vehicle} deletado com sucesso`)
-      
       return res.status(200).json({
         success: true,
-        message: `Vehicle '${vehicle}' deleted successfully`,
-        deletedVehicle: vehicle
+        message: `Vehicle '${vehicle}' deleted successfully`
       })
     }
 
@@ -233,9 +181,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('API Error:', error)
-    return res.status(500).json({
-      success: false,
-      error: error.message
-    })
+    return res.status(500).json({ success: false, error: error.message })
   }
 }
