@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     try {
         // Buscar todas as ocorrências da tabela
         const { data, error } = await supabase
-            .from('occorrences')  // Nome da tabela
+            .from('occurrences_control')  // Nome da tabela
             .select('*')
             .order('created_at', { ascending: false }) // opcional: ordenar por data
 
