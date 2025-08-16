@@ -5,7 +5,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 export default async function handler(req, res) {
-    // Permitir CORS
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
@@ -22,7 +21,6 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Buscar ocorrências
         const { data: ocorrencias, error: errorOcorrencias } = await supabase
             .from('occurrences_control')
             .select('*')
@@ -36,7 +34,6 @@ export default async function handler(req, res) {
             })
         }
 
-        // Buscar dados do EPE
         const { data: epeData, error: errorEpe } = await supabase
             .from('epe_status')
             .select('*')
