@@ -79,16 +79,14 @@ export default async function handler(req, res) {
             let updateResult;
 
             if (id) {
-                // Atualizar registro específico por ID
                 const { data, error } = await supabase
                     .from('epe_status')
-                    .update({ epe: epe }) // ← Removido updated_at
+                    .update({ epe: epe })
                     .eq('id', id)
                     .select()
 
                 updateResult = { data, error }
             } else {
-                // Atualizar o registro mais recente
                 const { data: latestEpe, error: errorLatest } = await supabase
                     .from('epe_status')
                     .select('id')
@@ -105,7 +103,7 @@ export default async function handler(req, res) {
 
                 const { data, error } = await supabase
                     .from('epe_status')
-                    .update({ epe: epe }) // ← Removido updated_at
+                    .update({ epe: epe })
                     .eq('id', latestEpe.id)
                     .select()
 
