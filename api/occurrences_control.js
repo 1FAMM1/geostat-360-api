@@ -12,8 +12,7 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') {
         return res.status(200).end()
     }
-
-    // ===== GET - LEITURA (código existente) =====
+    
     if (req.method === 'GET') {
         try {
             const { data: ocorrencias, error: errorOcorrencias } = await supabase
@@ -58,12 +57,10 @@ export default async function handler(req, res) {
         }
     }
 
-    // ===== PUT - ATUALIZAR EPE =====
     if (req.method === 'PUT') {
         try {
             const { epe, id } = req.body
 
-            // Validação básica
             if (!epe) {
                 return res.status(400).json({
                     success: false,
@@ -71,7 +68,6 @@ export default async function handler(req, res) {
                 })
             }
 
-            // Validar valores permitidos do EPE
             const epeValores = ['Monitorização', 'Nível I', 'Nível II', 'Nível III', 'Nível IV']
             if (!epeValores.includes(epe)) {
                 return res.status(400).json({
@@ -83,7 +79,6 @@ export default async function handler(req, res) {
             let updateResult;
 
             if (id) {
-                // Atualizar registro específico por ID
                 const { data, error } = await supabase
                     .from('epe_status')
                     .update({ 
@@ -95,8 +90,6 @@ export default async function handler(req, res) {
 
                 updateResult = { data, error }
             } else {
-                // Atualizar o registro mais recente (padrão)
-                // Primeiro busca o ID mais recente
                 const { data: latestEpe, error: errorLatest } = await supabase
                     .from('epe_status')
                     .select('id')
@@ -111,7 +104,6 @@ export default async function handler(req, res) {
                     })
                 }
 
-                // Atualiza o registro mais recente
                 const { data, error } = await supabase
                     .from('epe_status')
                     .update({ 
@@ -153,8 +145,7 @@ export default async function handler(req, res) {
             })
         }
     }
-
-    // Método não permitido
+    
     return res.status(405).json({ 
         success: false,
         error: 'Method not allowed. Use GET for reading or PUT for updating EPE.'
