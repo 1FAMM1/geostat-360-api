@@ -27,30 +27,33 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'GET' && !req.query.action) {
-      const { data: vehicles, error } = await supabase
-        .from('vehicle_status')
-        .select('*')
-      
-      if (error) throw error
-      
-      const vehicleStatuses = {}
-      const vehicleINOP = {}
-      const allVehicles = []
-      
-      vehicles.forEach(vehicle => {
-        allVehicles.push(vehicle.vehicle)
-        vehicleStatuses[vehicle.vehicle] = vehicle.current_status || 'Disponível'
-        vehicleINOP[vehicle.vehicle] = vehicle.is_inop
-      })
-      
-      return res.json({
-        success: true,
-        vehicles: allVehicles,
-        vehicleStatuses,
-        vehicleINOP,
-        timestamp: Date.now()
-      })
-    }
+  const { data: vehicles, error } = await supabase
+    .from('vehicle_status')
+    .select('vehicle, current_status, is_inop, veic_id')
+  
+  if (error) throw error
+  
+  const vehicleStatuses = {}
+  const vehicleINOP = {}
+  const vehicleIDs = {}
+  const allVehicles = []
+  
+  vehicles.forEach(vehicle => {
+    allVehicles.push(vehicle.vehicle)
+    vehicleStatuses[vehicle.vehicle] = vehicle.current_status || 'Disponível'
+    vehicleINOP[vehicle.vehicle] = vehicle.is_inop
+    vehicleIDs[vehicle.vehicle] = vehicle.veic_id || null
+  })
+  
+  return res.json({
+    success: true,
+    vehicles: allVehicles,
+    vehicleStatuses,
+    vehicleINOP,
+    vehicleIDs,
+    timestamp: Date.now()
+  })
+}
 
     if (req.method === 'POST' && req.body.action === 'add') {
       const { vehicle, status } = req.body
