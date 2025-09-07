@@ -59,7 +59,7 @@ export default async function handler(req, res) {
 async function handleGetTeams(req, res) {
   const { data: teams, error } = await supabase
     .from('fomio_teams')
-    .select('*')
+    .select('id, team_name, patente, nome, n_int')
     .order('team_name', { ascending: true })
     .order('id', { ascending: true });
 
@@ -74,6 +74,7 @@ async function handleGetTeams(req, res) {
       id: member.id,
       patente: member.patente,
       nome: member.nome
+      n_int: member.n_int
     });
   });
 
