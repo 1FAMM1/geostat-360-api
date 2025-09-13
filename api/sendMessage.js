@@ -1,45 +1,38 @@
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, message: 'Método não permitido' });
-  }
+// server.js
+import express from 'express';
+import fetch from 'node-fetch'; // se Node <18
 
-  const { vehicle, action, kilometers, hours, minutes, temBomba } = req.body;
+const app = express();
+app.use(express.json());
 
-  if (!vehicle || !action) {
-    return res.status(400).json({ success: false, message: 'Faltam parâmetros essenciais' });
-  }
+const TOKEN = '8014555896:AAEb3ulaMJknmxvLKMln0H4N_lmZ7U0z6rI';
+const CHAT_ID = '7961378096';
+
+app.post('/sendTelegram', async (req, res) => {
+  const { message } = req.body;
+  if (!message) return res.status(400).json({ success: false, error: 'Mensagem vazia' });
 
   try {
-    // 🔑 Inserir direto aqui
-    const TELEGRAM_TOKEN = '8065383541:AAG96PvaHbqXKJmFgVvW5Hs7uJ9NtXR00tg';
-    const TELEGRAM_CHAT_ID = '7961378096';
-
-    const now = new Date();
-    const time = now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
-    const date = now.toLocaleDateString('pt-PT');
-
-    let message = `🚨 *GEOSTAT 360*\n\n${vehicle}\n📍 *${action}*\n\n⏰ ${time}\n📅 ${date}`;
-    if (kilometers) message += `\n🛣️ *KMs: ${kilometers}*`;
-    if (temBomba) {
-      const pumpTime = `${String(hours).padStart(2, '0')}h${String(minutes).padStart(2, '0')}m`;
-      message += `\n⏱️ *Tempo Bomba: ${pumpTime}*`;
-    }
-
-    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+    const telegramUrl = `https://api.telegram.org/bot${TOKEN}/sendMessage`;
+    const response = await fetch(telegramUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: 'Markdown' })
+      body: JSON.stringify({
+        chat_id: CHAT_ID,
+        text: message,
+        parse_mode: 'Markdown'
+      })
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      return res.status(500).json({ success: false, message: data.description || 'Erro no Telegram' });
+    if (response.ok) {
+      return res.json({ success: true });
+    } else {
+      const text = await response.text();
+      return res.status(500).json({ success: false, error: text });
     }
-
-    res.status(200).json({ success: true, data });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: 'Erro interno do servidor' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
   }
-}
+});
+
+app.listen(3000, () => console.log('Servidor a correr na porta 3000'));
