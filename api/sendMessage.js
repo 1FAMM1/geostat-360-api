@@ -1,4 +1,4 @@
-// server.js
+// sendMessage.js
 import express from 'express';
 import fetch from 'node-fetch'; // se Node <18
 
