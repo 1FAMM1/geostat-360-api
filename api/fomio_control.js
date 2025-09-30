@@ -74,14 +74,10 @@ async function handleGetTeams(req, res) {
       id: member.id,
       patente: member.patente,
       nome: member.nome,
-      n_int: member.n_int,
-      h_entrada: member.h_entrada,
-      observ: member.observ,
-      MP: member.MP || false,
-      TAS: member.TAS || false
+      n_int: member.n_int
     });
   });
-  
+
   return res.json({
     success: true,
     teams: teamData,
@@ -156,14 +152,14 @@ async function handleDeleteTeam(req, res) {
 }
 
 async function handleInsertMember(req, res) {
-  const { team_name, patente, nome, n_int, h_entrada, h_exit, observ, MP, TAS } = req.body;
+  const { team_name, patente, nome } = req.body;
 
-  console.log('Inserindo:', { team_name, patente, nome, n_int, h_entrada, h_exit, observ, MP, TAS });
+  console.log('Inserindo:', { team_name, patente, nome });
 
   const { data, error } = await supabase
     .from('fomio_teams')
-    .insert([{
-      team_name,
+    .insert([{ 
+      team_name, 
       patente,
       nome,
       n_int,
@@ -178,10 +174,10 @@ async function handleInsertMember(req, res) {
   if (error) throw error;
 
   console.log('Inserido com sucesso:', data);
-
-  return res.status(200).json({
-    success: true,
-    data
+  
+  return res.status(200).json({ 
+    success: true, 
+    data 
   });
 }
 
