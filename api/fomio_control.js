@@ -106,7 +106,8 @@ async function handleUpdateTeam(req, res) {
     const membersToInsert = members.map(member => ({
       team_name,
       patente: member.patente || '',
-      nome: member.nome || ''
+      nome: member.nome || '',
+      n_int: member.n_int || ''
     }));
 
     const { error: insertError } = await supabase
@@ -155,7 +156,8 @@ async function handleInsertMember(req, res) {
     .insert([{ 
       team_name, 
       patente, 
-      nome
+      nome,
+      n_int
     }])
     .select();
 
