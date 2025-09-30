@@ -72,9 +72,14 @@ async function handleGetTeams(req, res) {
     }
     teamData[member.team_name].push({
       id: member.id,
+      n_int: member.n_int,
       patente: member.patente,
       nome: member.nome,
-      n_int: member.n_int
+      h_entrance: member.h_entrance,
+      h_exit: member.h_exit,
+      MP: member.MP,
+      TAS: member.TAS,
+      observ: member.observ
     });
   });
 
