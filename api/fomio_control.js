@@ -59,7 +59,7 @@ export default async function handler(req, res) {
 async function handleGetTeams(req, res) {
   const { data: teams, error } = await supabase
     .from('fomio_teams')
-    .select('id, team_name, n_int, patente, nome, h_entrance, h_exit, MP, TAS')
+    .select('id, team_name, n_int, patente, nome, h_entrance, h_exit, MP, TAS, observ')
     .order('team_name', { ascending: true })
     .order('id', { ascending: true });
 
@@ -111,7 +111,8 @@ async function handleUpdateTeam(req, res) {
       h_entrance: member.h_entrance || '',
       h_exit: member.h_exit || '',
       MP: member.MP || '',
-      TAS: member.TAS || ''
+      TAS: member.TAS || '',
+      observ: member.observ || ''
     }));
 
     const { error: insertError } = await supabase
@@ -165,7 +166,8 @@ async function handleInsertMember(req, res) {
       h_entrance,
       h_exit,
       MP,
-      TAS
+      TAS,
+      observ
     }])
     .select();
 
