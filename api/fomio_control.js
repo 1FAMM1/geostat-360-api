@@ -72,14 +72,9 @@ async function handleGetTeams(req, res) {
     }
     teamData[member.team_name].push({
       id: member.id,
-      n_int: member.n_int,
       patente: member.patente,
       nome: member.nome,
-      h_entrada: member.h_entrada,
-      h_exit: member.h_exit,
-      MP: member.MP,
-      TAS: member.TAS,
-      observ: member.observ
+      n_int: member.n_int
     });
   });
 
@@ -110,14 +105,8 @@ async function handleUpdateTeam(req, res) {
   if (members.length > 0) {
     const membersToInsert = members.map(member => ({
       team_name,
-      n_int: member.n_int || '',
       patente: member.patente || '',
-      nome: member.nome || '',
-      h_entrada: member.h_entrada || '',
-      h_exit: member.h_exit || '',
-      observ: member.observ || '',
-      MP: member.MP || false,
-      TAS: member.TAS || false
+      nome: member.nome || ''
     }));
 
     const { error: insertError } = await supabase
@@ -165,14 +154,8 @@ async function handleInsertMember(req, res) {
     .from('fomio_teams')
     .insert([{ 
       team_name, 
-      patente,
-      nome,
-      n_int,
-      h_entrada,
-      h_exit,
-      observ,
-      MP,
-      TAS
+      patente, 
+      nome
     }])
     .select();
 
