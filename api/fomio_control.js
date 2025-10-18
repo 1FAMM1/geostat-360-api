@@ -74,18 +74,17 @@ async function handleUpdateTeam(req, res) {
   const { error: deleteError } = await supabase.from('fomio_teams').delete().eq('team_name', team_name);
   if (deleteError) throw deleteError;
 
-  if (members.length > 0) {
-    const membersToInsert = members.map(member => ({
-      team_name,
-      n_int: member.n_int || '',
-      patente: member.patente || '',
-      nome: member.nome || '',
-      h_entrance: member.h_entrance || '',
-      h_exit: member.h_exit || '',
-      MP: member.MP || false,
-      TAS: member.TAS || false,
-      observ: member.observ || ''
-    }));
+  const membersToInsert = members.map(member => ({
+  team_name,
+  n_int: member.n_int || '',
+  patente: member.patente || '',
+  nome: member.nome || '',
+  h_entrance: member.entrada || '', // trocar de h_entrance
+  h_exit: member.saida || '',       // trocar de h_exit
+  MP: !!member.MP,                  // garante booleano
+  TAS: !!member.TAS,                // garante booleano
+  observ: member.obs || ''          // trocar de observ
+}));
 
     const { data, error: insertError } = await supabase.from('fomio_teams').insert(membersToInsert).select();
     if (insertError) {
