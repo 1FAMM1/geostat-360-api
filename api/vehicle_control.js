@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET' && !req.query.action) {
       const { data: vehicles, error } = await supabase
         .from('vehicle_status')
-        .select('vehicle, current_status, is_inop, veic_id')
+        .select('vehicle, current_status, is_inop, vehic_id')
   
       if (error) throw error
   
